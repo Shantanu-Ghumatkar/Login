@@ -1,22 +1,20 @@
-
-
+from email import message
 import email
-from re import I
-from unicodedata import name
-from flask import Flask, render_template, request,redirect,session
-import sys
+from webbrowser import get
 import mysql.connector
+from flask import Flask, render_template, request,redirect,session, url_for
+import sys
 import os
+import traceback
 
-
-app = Flask(__name__)
+app = Flask(__name__ ,static_url_path='/static')
 app.secret_key=os.urandom(24)
 try:
             conn = mysql.connector.connect(host ="localhost", user="root", 
             password="",database="log_in")
             mycursor =conn.cursor()
 except:
-            print("Some error occured. could not connect")
+            print("Some error occured. could not connect. connect to the my sql")
             sys.exit(0)
 else:
             print("-----Connected to database------- ")
@@ -81,6 +79,54 @@ def logout():
     session.pop('user_id')
     return redirect('/')
 
+@app.route('/Contact_us',methods=['POST'])
+def Contact_us():
+    email=request.form.get('email')
+    message=request.form.get('message')
+
+    try:
+        mycursor.execute("""
+        update users set messege='{}' where Email like '{}';
+        """.format(message,email))
+        conn.commit()
+        data =mycursor.fetchall()
+
+    except Exception as e:
+        return render_template('welcome.html')
+    else:
+        return "done"
+
+@app.route('/Forgotten')
+def Forgotten():
+    return render_template('Forgotten.html')
+
+@app.route('/Forgotten_P1/<score>')
+def Forgotten_P1(score):
+   
+    if score==" ":
+        score='No User exist'
+    else:
+        score='Your Password is'+score
+    # exp={'score':score,'res':res}
+    # return render_template('result.html',result=exp)
+    
+    return render_template('pass.html', pa=score)
+
+@app.route('/Forgotten_P',methods=['POST','GET'])
+def Forgotten_P():
+    email=request.form.get('email')
+    mycursor.execute("""
+            SELECT * FROM `users` WHERE Email like '{}';
+            """.format(email))
+    data =mycursor.fetchall()
+    res='Forgotten_P1'
+    if data:
+        score=data[0][3]
+        score1=data[0][2]
+        print(score1 + 'psss is ' +score )
+        return redirect(url_for('Forgotten_P1',score=data[0][3]))
+    else:
+            return redirect(url_for('Forgotten_P1',score=' '))
 
 if __name__ =="__main__":
     app.run(debug=True)
